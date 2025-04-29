@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GatewayController;
+use App\Http\Controllers\MetricsController;
 
 Route::get('/', function () {
     return response()->json([
@@ -12,3 +13,4 @@ Route::get('/', function () {
 });
 
 Route::get('/health', [GatewayController::class, 'health']);
+Route::get('/metrics', MetricsController::class)->name('metrics');
