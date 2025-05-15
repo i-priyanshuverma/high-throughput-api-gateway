@@ -1,0 +1,13 @@
+apiVersion: v2
+name: api-gateway
+description: Production Helm chart for High-Throughput API Gateway (PHP 8.3 / Laravel 11 / Octane Swoole)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - laravel
+  - octane
+  - swoole
+  - api-gateway
+  - redis
+  - kubernetes
