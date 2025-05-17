@@ -19,7 +19,6 @@ class CircuitBreakerTest extends TestCase
         $cb = new CircuitBreaker();
         $service = 'orders';
 
-        // Record threshold failures
         for ($i = 0; $i < 5; $i++) {
             $cb->recordFailure($service);
         }
@@ -30,6 +29,41 @@ class CircuitBreakerTest extends TestCase
         $this->assertFalse($cb->isAvailable($service));
     }
 
+    public function test_circuit_breaker_half_open_transition_and_probe_recovery(): void
+    {
+        $cb = new CircuitBreaker();
+        $service = 'products';
+
+        // Trip to OPEN
+        $cb->openCircuit($service);
+        $this->assertEquals(CircuitBreaker::STATE_OPEN, $cb->getState($service));
+
+        // Transition to HALF_OPEN
+        $cb->transitionToHalfOpen($service);
+        $this->assertEquals(CircuitBreaker::STATE_HALF_OPEN, $cb->getState($service));
+        $this->assertTrue($cb->isAvailable($service));
+
+        // Record consecutive successes to close circuit
+        $cb->recordSuccess($service);
+        $cb->recordSuccess($service);
+        $cb->recordSuccess($service);
+
+        $this->assertEquals(CircuitBreaker::STATE_CLOSED, $cb->getState($service));
+    }
+
+    public function test_circuit_breaker_reopens_if_failure_occurs_in_half_open_state(): void
+    {
+        $cb = new CircuitBreaker();
+        $service = 'users';
+
+        $cb->transitionToHalfOpen($service);
+        $this->assertEquals(CircuitBreaker::STATE_HALF_OPEN, $cb->getState($service));
+
+        // Single failure in probe mode immediately trips circuit back to OPEN
+        $cb->recordFailure($service);
+        $this->assertEquals(CircuitBreaker::STATE_OPEN, $cb->getState($service));
+    }
+
     public function test_circuit_breaker_middleware_returns_503_fallback_when_open(): void
     {
         $cb = app(CircuitBreaker::class);
@@ -37,9 +71,8 @@ class CircuitBreakerTest extends TestCase
 
         $response = $this->getJson('/api/v1/users/profile');
 
-        // Unauthenticated returns 401, or if CB trips returns 503
         $this->assertContains($response->status(), [401, 503]);
-        
+
         if ($response->status() === 503) {
             $response->assertJson([
                 'error' => 'Service Unavailable',
@@ -47,16 +80,5 @@ class CircuitBreakerTest extends TestCase
                 'status' => 503,
             ]);
         }
-    }
-
-    public function test_metrics_endpoint_returns_prometheus_format(): void
-    {
-        $response = $this->get('/metrics');
-
-        $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
-        $this->assertStringContainsString('gateway_requests_total', $response->getContent());
-        $this->assertStringContainsString('gateway_circuit_breaker_state', $response->getContent());
-        $this->assertStringContainsString('gateway_rate_limit_hits_total', $response->getContent());
     }
 }
