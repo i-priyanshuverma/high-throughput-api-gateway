@@ -12,11 +12,13 @@ class CircuitBreaker
 
     protected int $failureThreshold;
     protected int $resetTimeout;
+    protected int $halfOpenSuccessThreshold;
 
     public function __construct()
     {
         $this->failureThreshold = (int) config('gateway.circuit_breaker.failure_threshold', 5);
         $this->resetTimeout = (int) config('gateway.circuit_breaker.reset_timeout', 30);
+        $this->halfOpenSuccessThreshold = (int) config('gateway.circuit_breaker.half_open_success_threshold', 3);
     }
 
     /**
@@ -33,24 +35,31 @@ class CircuitBreaker
         if ($state === self::STATE_OPEN) {
             $openedAt = (float) $this->getRedisValue("circuit:{$service}:opened_at", 0);
             if ((microtime(true) - $openedAt) >= $this->resetTimeout) {
-                $this->setState($service, self::STATE_HALF_OPEN);
+                $this->transitionToHalfOpen($service);
                 return true;
             }
             return false;
         }
 
-        // HALF_OPEN state allows trial requests
+        // In HALF_OPEN state, allow limited trial probe requests
         return true;
     }
 
     /**
-     * Record a successful downstream call.
+     * Record a successful downstream call and handle recovery transitions.
      */
     public function recordSuccess(string $service): void
     {
         $state = $this->getState($service);
 
-        if ($state === self::STATE_HALF_OPEN || $state === self::STATE_OPEN) {
+        if ($state === self::STATE_HALF_OPEN) {
+            $successes = (int) $this->getRedisValue("circuit:{$service}:half_open_successes", 0) + 1;
+            $this->setRedisValue("circuit:{$service}:half_open_successes", $successes, 60);
+
+            if ($successes >= $this->halfOpenSuccessThreshold) {
+                $this->resetCircuit($service);
+            }
+        } elseif ($state === self::STATE_OPEN) {
             $this->resetCircuit($service);
         } else {
             $this->delRedisKey("circuit:{$service}:failures");
@@ -58,16 +67,33 @@ class CircuitBreaker
     }
 
     /**
-     * Record a downstream failure.
+     * Record a downstream failure. If in HALF_OPEN, immediately trip back to OPEN.
      */
     public function recordFailure(string $service): void
     {
+        $state = $this->getState($service);
+
+        if ($state === self::STATE_HALF_OPEN) {
+            // Immediate re-opening upon single failure in probe mode
+            $this->openCircuit($service);
+            return;
+        }
+
         $failures = (int) $this->getRedisValue("circuit:{$service}:failures", 0) + 1;
         $this->setRedisValue("circuit:{$service}:failures", $failures, 60);
 
-        if ($failures >= $this->failureThreshold || $this->getState($service) === self::STATE_HALF_OPEN) {
+        if ($failures >= $this->failureThreshold) {
             $this->openCircuit($service);
         }
+    }
+
+    /**
+     * Transition state to HALF_OPEN to probe downstream health.
+     */
+    public function transitionToHalfOpen(string $service): void
+    {
+        $this->setState($service, self::STATE_HALF_OPEN);
+        $this->setRedisValue("circuit:{$service}:half_open_successes", 0, 60);
     }
 
     /**
@@ -77,6 +103,7 @@ class CircuitBreaker
     {
         $this->setState($service, self::STATE_OPEN);
         $this->setRedisValue("circuit:{$service}:opened_at", microtime(true), $this->resetTimeout * 2);
+        $this->delRedisKey("circuit:{$service}:half_open_successes");
     }
 
     /**
@@ -87,6 +114,7 @@ class CircuitBreaker
         $this->setState($service, self::STATE_CLOSED);
         $this->delRedisKey("circuit:{$service}:failures");
         $this->delRedisKey("circuit:{$service}:opened_at");
+        $this->delRedisKey("circuit:{$service}:half_open_successes");
     }
 
     /**
@@ -97,9 +125,6 @@ class CircuitBreaker
         return $this->getRedisValue("circuit:{$service}:state", self::STATE_CLOSED);
     }
 
-    /**
-     * Helper to set state.
-     */
     protected function setState(string $service, string $state): void
     {
         $this->setRedisValue("circuit:{$service}:state", $state, 3600);
