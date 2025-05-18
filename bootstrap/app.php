@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Exceptions\Rfc7807ProblemDetails;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,5 +22,19 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // Custom exception handling for API gateway
+        $exceptions->render(function (Throwable $e, $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                $status = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
+                $title = match ($status) {
+                    401 => 'Unauthorized',
+                    403 => 'Forbidden',
+                    404 => 'Resource Not Found',
+                    429 => 'Too Many Requests',
+                    502 => 'Bad Gateway',
+                    503 => 'Service Unavailable',
+                    default => 'Internal Server Error',
+                };
+                return Rfc7807ProblemDetails::render($e, $status, $title);
+            }
+        });
     })->create();
