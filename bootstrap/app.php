@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'gateway.ratelimit' => \App\Http\Middleware\RedisSlidingWindowRateLimiter::class,
             'gateway.circuitbreaker' => \App\Http\Middleware\CircuitBreakerMiddleware::class,
             'gateway.proxy' => \App\Http\Middleware\ApiGatewayProxyMiddleware::class,
+            'gateway.async_log' => \App\Http\Middleware\AsyncRequestLoggingMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
