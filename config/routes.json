@@ -1,0 +1,28 @@
+{
+    "services": [
+        {
+            "name": "users",
+            "prefix": "api/v1/users",
+            "target": "http://127.0.0.1:8001",
+            "auth_required": true,
+            "rate_limit": 100,
+            "timeout": 5.0
+        },
+        {
+            "name": "orders",
+            "prefix": "api/v1/orders",
+            "target": "http://127.0.0.1:8002",
+            "auth_required": true,
+            "rate_limit": 100,
+            "timeout": 5.0
+        },
+        {
+            "name": "products",
+            "prefix": "api/v1/products",
+            "target": "http://127.0.0.1:8003",
+            "auth_required": false,
+            "rate_limit": 300,
+            "timeout": 3.0
+        }
+    ]
+}

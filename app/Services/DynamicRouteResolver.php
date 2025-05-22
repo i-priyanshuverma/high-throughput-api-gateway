@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\File;
+
+class DynamicRouteResolver
+{
+    protected string $configPath;
+    protected array $routes = [];
+
+    public function __construct()
+    {
+        $this->configPath = config_path('routes.json');
+        $this->loadRoutes();
+    }
+
+    /**
+     * Load routes from JSON file with fallback to static array.
+     */
+    public function loadRoutes(): array
+    {
+        if (File::exists($this->configPath)) {
+            $json = File::get($this->configPath);
+            $decoded = json_decode($json, true);
+            if (isset($decoded['services']) && is_array($decoded['services'])) {
+                $this->routes = $decoded['services'];
+                return $this->routes;
+            }
+        }
+
+        $this->routes = [
+            ['name' => 'users', 'prefix' => 'api/v1/users', 'target' => env('SERVICE_USERS_URL', 'http://127.0.0.1:8001'), 'auth_required' => true],
+            ['name' => 'orders', 'prefix' => 'api/v1/orders', 'target' => env('SERVICE_ORDERS_URL', 'http://127.0.0.1:8002'), 'auth_required' => true],
+            ['name' => 'products', 'prefix' => 'api/v1/products', 'target' => env('SERVICE_PRODUCTS_URL', 'http://127.0.0.1:8003'), 'auth_required' => false],
+        ];
+
+        return $this->routes;
+    }
+
+    /**
+     * Find matching service for URI path.
+     */
+    public function resolve(string $path): ?array
+    {
+        $cleanPath = ltrim($path, '/');
+        foreach ($this->routes as $route) {
+            if (str_starts_with($cleanPath, ltrim($route['prefix'], '/'))) {
+                return $route;
+            }
+        }
+        return null;
+    }
+}
