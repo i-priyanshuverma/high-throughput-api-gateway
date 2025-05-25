@@ -11,6 +11,17 @@ use Illuminate\Support\Facades\Log;
 class ApiGatewayProxyMiddleware
 {
     /**
+     * Dangerous or internal headers that must be stripped before forwarding.
+     */
+    protected array $blacklistedHeaders = [
+        'host',
+        'content-length',
+        'x-envoy-internal',
+        'x-internal-token',
+        'x-admin-override',
+    ];
+
+    /**
      * Handle an incoming request by proxying to downstream microservices.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -22,7 +33,6 @@ class ApiGatewayProxyMiddleware
     {
         $services = config('gateway.services', []);
         
-        // Auto-detect service key from URI path if not explicitly provided
         if (!$serviceKey) {
             $path = ltrim($request->getPathInfo(), '/');
             foreach ($services as $key => $config) {
@@ -44,21 +54,26 @@ class ApiGatewayProxyMiddleware
         $serviceConfig = $services[$serviceKey];
         $baseUrl = rtrim($serviceConfig['base_url'], '/');
         
-        // Calculate relative subpath
         $prefix = ltrim($serviceConfig['prefix'], '/');
         $fullPath = ltrim($request->getPathInfo(), '/');
         $subPath = preg_replace('/^' . preg_quote($prefix, '/') . '/', '', $fullPath);
         $targetUrl = $baseUrl . '/' . ltrim($subPath, '/');
 
-        // Extract forwardable headers
+        // Sanitize and filter forwardable headers
         $headers = collect($request->headers->all())
-            ->mapWithKeys(fn ($v, $k) => [$k => is_array($v) ? implode(', ', $v) : $v])
-            ->except(['host', 'content-length'])
+            ->mapWithKeys(function ($v, $k) {
+                $headerKey = strtolower((string) $k);
+                $val = is_array($v) ? implode(', ', $v) : (string) $v;
+                // Sanitize newlines & carriage returns to prevent CRLF injection
+                $cleanVal = str_replace(["\r", "\n"], '', $val);
+                return [$headerKey => $cleanVal];
+            })
+            ->except($this->blacklistedHeaders)
             ->toArray();
 
-        $headers['X-Forwarded-For'] = $request->ip();
-        $headers['X-Forwarded-Proto'] = $request->getScheme();
-        $headers['X-Gateway-Request-ID'] = $request->header('X-Request-ID', (string) \Illuminate\Support\Str::uuid());
+        $headers['x-forwarded-for'] = $request->ip();
+        $headers['x-forwarded-proto'] = $request->getScheme();
+        $headers['x-gateway-request-id'] = $request->header('X-Request-ID', (string) \Illuminate\Support\Str::uuid());
 
         try {
             $method = strtolower($request->getMethod());
