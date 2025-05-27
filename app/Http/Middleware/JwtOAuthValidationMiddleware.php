@@ -7,11 +7,19 @@ use Illuminate\Http\Request;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Symfony\Component\HttpFoundation\Response;
+use App\Services\JwtKeyCacheService;
 
 class JwtOAuthValidationMiddleware
 {
+    protected JwtKeyCacheService $keyCache;
+
+    public function __construct(JwtKeyCacheService $keyCache)
+    {
+        $this->keyCache = $keyCache;
+    }
+
     /**
-     * Handle incoming request by validating JWT / OAuth2 token.
+     * Handle incoming request by validating JWT / OAuth2 token with cached public keys.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Closure  $next
@@ -31,13 +39,12 @@ class JwtOAuthValidationMiddleware
         }
 
         $jwtToken = substr($authorizationHeader, 7);
-        $secretKey = config('gateway.auth.secret', 'super-secret-jwt-signing-key-for-api-gateway-auth-2025');
+        $secretKey = $this->keyCache->getPublicKey('default');
         $algorithm = config('gateway.auth.algorithm', 'HS256');
 
         try {
             $decoded = JWT::decode($jwtToken, new Key($secretKey, $algorithm));
 
-            // Validate token expiration explicitly
             if (isset($decoded->exp) && $decoded->exp < time()) {
                 return response()->json([
                     'error' => 'Unauthorized',
@@ -46,7 +53,6 @@ class JwtOAuthValidationMiddleware
                 ], 401);
             }
 
-            // Scope check if required
             if ($requiredScope && isset($decoded->scopes) && is_array($decoded->scopes)) {
                 if (!in_array($requiredScope, $decoded->scopes, true)) {
                     return response()->json([
@@ -57,7 +63,6 @@ class JwtOAuthValidationMiddleware
                 }
             }
 
-            // Inject token user claims into request attributes
             $request->attributes->set('jwt_claims', (array) $decoded);
             $request->attributes->set('user_id', $decoded->sub ?? null);
 
