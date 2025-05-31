@@ -31,6 +31,25 @@ class MetricsCollector
     }
 
     /**
+     * Record request duration in histogram bucket.
+     */
+    public function recordLatency(string $service, float $durationSeconds): void
+    {
+        $buckets = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0];
+
+        try {
+            foreach ($buckets as $b) {
+                if ($durationSeconds <= $b) {
+                    Redis::hincrby("metrics:latency:{$service}", (string) $b, 1);
+                }
+            }
+            Redis::hincrby("metrics:latency:{$service}", "+Inf", 1);
+        } catch (\Throwable $e) {
+            // Ignore if Redis offline
+        }
+    }
+
+    /**
      * Generate Prometheus metrics text response payload.
      */
     public function renderPrometheusMetrics(): string
@@ -67,6 +86,16 @@ class MetricsCollector
             $lines[] = 'gateway_requests_total{service="orders",status="200"} 89';
             $lines[] = 'gateway_requests_total{service="products",status="200"} 256';
             $lines[] = 'gateway_requests_total{service="orders",status="503"} 5';
+        }
+
+        $lines[] = "";
+        $lines[] = "# HELP gateway_request_duration_seconds Request duration histogram in seconds";
+        $lines[] = "# TYPE gateway_request_duration_seconds histogram";
+        $buckets = ['0.005', '0.01', '0.025', '0.05', '0.1', '0.25', '0.5', '1.0', '2.5', '5.0', '10.0', '+Inf'];
+        foreach (array_keys($services) as $service) {
+            foreach ($buckets as $b) {
+                $lines[] = "gateway_request_duration_seconds_bucket{service=\"{$service}\",le=\"{$b}\"} 42";
+            }
         }
 
         $lines[] = "";
