@@ -6,9 +6,6 @@ return [
     |--------------------------------------------------------------------------
     | Octane Server
     |--------------------------------------------------------------------------
-    |
-    | Options: "swoole", "roadrunner", "frankenphp"
-    |
     */
 
     'server' => env('OCTANE_SERVER', 'swoole'),
@@ -17,15 +14,11 @@ return [
 
     'listeners' => [
         'swoole' => [
-            \Laravel\Octane\Events\WorkerStarting::class => [
-                // Octane worker startup listeners
-            ],
+            \Laravel\Octane\Events\WorkerStarting::class => [],
             \Laravel\Octane\Events\RequestReceived::class => [
                 \Laravel\Octane\Listeners\CreateDatabaseRelays::class,
             ],
-            \Laravel\Octane\Events\RequestTerminated::class => [
-                // Flush request state
-            ],
+            \Laravel\Octane\Events\RequestTerminated::class => [],
             \Laravel\Octane\Events\TaskReceived::class => [],
             \Laravel\Octane\Events\TickReceived::class => [],
             \Laravel\Octane\Events\WorkerErrorOccurred::class => [],
@@ -37,19 +30,19 @@ return [
         ... Laravel\Octane\Octane::defaultServicesToWarm(),
     ],
 
-    'flush' => [
-        // Services to reset/flush per request
-    ],
+    'flush' => [],
 
     'swoole' => [
         'options' => [
-            'worker_num' => swoole_cpu_num() * 2,
-            'task_worker_num' => swoole_cpu_num() * 2,
-            'max_request' => 10000,
-            'task_max_request' => 10000,
+            'worker_num' => env('OCTANE_WORKERS', swoole_cpu_num() * 4),
+            'task_worker_num' => env('OCTANE_TASK_WORKERS', swoole_cpu_num() * 4),
+            'max_request' => 25000,
+            'task_max_request' => 25000,
             'open_tcp_nodelay' => true,
             'enable_reuse_port' => true,
-            'max_coroutine' => 100000,
+            'max_coroutine' => 500000,
+            'socket_buffer_size' => 128 * 1024 * 1024, // 128MB buffer
+            'buffer_output_size' => 64 * 1024 * 1024,
         ],
     ],
 
