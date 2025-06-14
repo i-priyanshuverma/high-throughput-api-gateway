@@ -22,7 +22,7 @@ class ApiGatewayProxyMiddleware
     ];
 
     /**
-     * Handle an incoming request by proxying to downstream microservices.
+     * Handle an incoming request by proxying to downstream microservices with connection reset protection.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Closure  $next
@@ -59,12 +59,10 @@ class ApiGatewayProxyMiddleware
         $subPath = preg_replace('/^' . preg_quote($prefix, '/') . '/', '', $fullPath);
         $targetUrl = $baseUrl . '/' . ltrim($subPath, '/');
 
-        // Sanitize and filter forwardable headers
         $headers = collect($request->headers->all())
             ->mapWithKeys(function ($v, $k) {
                 $headerKey = strtolower((string) $k);
                 $val = is_array($v) ? implode(', ', $v) : (string) $v;
-                // Sanitize newlines & carriage returns to prevent CRLF injection
                 $cleanVal = str_replace(["\r", "\n"], '', $val);
                 return [$headerKey => $cleanVal];
             })
@@ -74,14 +72,20 @@ class ApiGatewayProxyMiddleware
         $headers['x-forwarded-for'] = $request->ip();
         $headers['x-forwarded-proto'] = $request->getScheme();
         $headers['x-gateway-request-id'] = $request->header('X-Request-ID', (string) \Illuminate\Support\Str::uuid());
+        $headers['connection'] = 'keep-alive';
 
         try {
             $method = strtolower($request->getMethod());
             $timeout = $serviceConfig['timeout'] ?? 5.0;
+            $retry = $serviceConfig['retry'] ?? 2;
 
-            $httpClient = Http::withHeaders($headers)
-                ->timeout($timeout)
-                ->withoutVerifying();
+            // Retries with 100ms backoff on connection resets under high concurrency
+            $httpClient = Http::retry($retry, 100, function (\Throwable $exception) {
+                return $exception instanceof \Illuminate\Http\Client\ConnectionException;
+            }, throw: false)
+            ->withHeaders($headers)
+            ->timeout($timeout)
+            ->withoutVerifying();
 
             if (in_array($method, ['get', 'head', 'delete'])) {
                 $response = $httpClient->$method($targetUrl, $request->query());
