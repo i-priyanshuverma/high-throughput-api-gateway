@@ -52,6 +52,47 @@ High-performance, enterprise-grade API Gateway engineered with **PHP 8.3**, **La
 
 ---
 
+## 🔄 Sequence Flowcharts
+
+### 1. Request Proxy Execution Pipeline Sequence
+
+```
+Client             JwtOAuth            RedisLimiter         CircuitBreaker        Microservice
+  |                   |                     |                      |                   |
+  |--- HTTP GET ---->|                      |                      |                   |
+  |                   |-- Validate JWT ---->|                      |                   |
+  |                   |   (Key Cache)       |                      |                   |
+  |                   |                     |-- Check ZSET Count ->|                   |
+  |                   |                     |   (Sliding Window)   |                   |
+  |                   |                     |                      |-- Check State --->|
+  |                   |                     |                      |   (If CLOSED)     |
+  |                   |                     |                      |                   |-- HTTP Request ->
+  |                   |                     |                      |<-- Response ------|
+  |<-- HTTP 200 ------|<--------------------|<---------------------|
+```
+
+### 2. Circuit Breaker Fault Recovery Sequence
+
+```
+CircuitBreaker (OPEN)                     Redis (opened_at)             Microservice
+        |                                       |                            |
+        |--- Check Timeout (30s) -------------->|                            |
+        |<-- Reset Timeout Expired -------------|                            |
+        |                                                                    |
+        |=== Transition to HALF_OPEN =======================================|
+        |                                                                    |
+        |--- Trial Request Probe 1 ----------------------------------------->|
+        |<-- Success --------------------------------------------------------|
+        |--- Trial Request Probe 2 ----------------------------------------->|
+        |<-- Success --------------------------------------------------------|
+        |--- Trial Request Probe 3 ----------------------------------------->|
+        |<-- Success --------------------------------------------------------|
+        |                                                                    |
+        |=== Transition to CLOSED (Normal Operation Restored) ==============|
+```
+
+---
+
 ## 📊 K6 Performance Benchmarks & Latency Statistics
 
 Load testing conducted using K6 on 8-core CPU, 16GB RAM Swoole worker node:
@@ -127,19 +168,22 @@ k6 run tests/k6/load_test.js
 
 ---
 
-## ☸️ Kubernetes Helm Deployment
+## ☸️ Production Kubernetes Deployment Guide
 
 Deploy to Kubernetes cluster using the provided Helm chart:
 
 ```bash
+# Create target namespace
+kubectl create namespace gateway
+
 # Dry-run template generation
 helm template api-gateway ./helm/api-gateway
 
 # Install / Upgrade in Kubernetes
 helm upgrade --install api-gateway ./helm/api-gateway \
   --namespace gateway \
-  --create-namespace \
-  --set replicaCount=5
+  --set replicaCount=5 \
+  --set env.APP_ENV=production
 ```
 
 ---
