@@ -13,4 +13,5 @@ Route::get('/', function () {
 });
 
 Route::get('/health', [GatewayController::class, 'health']);
+Route::get('/healthz', [GatewayController::class, 'readiness']);
 Route::get('/metrics', MetricsController::class)->name('metrics');
