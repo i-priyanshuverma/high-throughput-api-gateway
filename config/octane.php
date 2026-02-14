@@ -36,13 +36,16 @@ return [
         'options' => [
             'worker_num' => env('OCTANE_WORKERS', swoole_cpu_num() * 4),
             'task_worker_num' => env('OCTANE_TASK_WORKERS', swoole_cpu_num() * 4),
-            'max_request' => 25000,
-            'task_max_request' => 25000,
+            'max_request' => (int) env('OCTANE_MAX_REQUESTS', 50000),
+            'task_max_request' => (int) env('OCTANE_TASK_MAX_REQUESTS', 50000),
+            'max_wait_time' => 30,
+            'memory_limit' => env('OCTANE_MEMORY_LIMIT', '512M'),
             'open_tcp_nodelay' => true,
             'enable_reuse_port' => true,
             'max_coroutine' => 500000,
             'socket_buffer_size' => 128 * 1024 * 1024, // 128MB buffer
             'buffer_output_size' => 64 * 1024 * 1024,
+            'package_max_length' => 128 * 1024 * 1024,
         ],
     ],
 
