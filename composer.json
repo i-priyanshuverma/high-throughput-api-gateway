@@ -2,16 +2,7 @@
     "name": "gateway/high-throughput-api-gateway",
     "type": "project",
     "description": "High-Throughput API Gateway built with PHP 8.3, Laravel 11, Laravel Octane (Swoole), Redis, and Kubernetes.",
-    "keywords": [
-        "laravel",
-        "framework",
-        "octane",
-        "swoole",
-        "api-gateway",
-        "redis",
-        "rate-limiter",
-        "circuit-breaker"
-    ],
+    "keywords": ["laravel", "framework", "octane", "swoole", "api-gateway", "redis", "rate-limiter", "circuit-breaker"],
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -58,10 +49,7 @@
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
-        "sort-packages": true,
-        "platform": {
-            "php": "8.3.0"
-        }
+        "sort-packages": true
     },
     "minimum-stability": "stable",
     "prefer-stable": true

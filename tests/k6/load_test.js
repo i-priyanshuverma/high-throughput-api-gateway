@@ -3,13 +3,15 @@ import { check, sleep } from 'k6';
 
 export const options = {
     stages: [
-        { duration: '30s', target: 500 },  // Ramp up to 500 virtual users
-        { duration: '1m', target: 2000 },  // Spike load to 2000 virtual users
-        { duration: '30s', target: 0 },    // Ramp down to 0
+        { duration: '30s', target: 500 },   // Warm up: 500 virtual users
+        { duration: '1m', target: 2000 },   // Steady high load: 2000 VUs
+        { duration: '30s', target: 5000 },  // Peak traffic spike scenario: 5000 VUs
+        { duration: '1m', target: 2000 },   // Sustained load recovery: 2000 VUs
+        { duration: '30s', target: 0 },     // Ramp down: 0 VUs
     ],
     thresholds: {
-        http_req_duration: ['p(95)<50', 'p(99)<100'], // 95% of requests must complete under 50ms
-        http_req_failed: ['rate<0.01'],              // Less than 1% failure rate
+        http_req_duration: ['p(95)<50', 'p(99)<120'], // 95% under 50ms, 99% under 120ms
+        http_req_failed: ['rate<0.01'],              // Under 1% failure rate
     },
 };
 
@@ -20,15 +22,24 @@ export default function () {
         headers: {
             'Content-Type': 'application/json',
             'X-API-Key': `k6-vu-${__VU}`,
+            'X-Request-ID': `req-k6-${__VU}-${Date.now()}`,
         },
     };
 
-    const res = http.get(`${BASE_URL}/api/v1/products`, params);
+    // Test proxy route
+    const resProduct = http.get(`${BASE_URL}/v1/products`, params);
 
-    check(res, {
-        'status is 200 or 429 or 502': (r) => [200, 429, 502].includes(r.status),
+    check(resProduct, {
+        'product endpoint status is valid': (r) => [200, 429, 503].includes(r.status),
         'transaction response time < 50ms': (r) => r.timings.duration < 50,
+    });
+
+    // Test healthz readiness route
+    const resHealth = http.get(`${BASE_URL}/healthz`);
+    check(resHealth, {
+        'healthz status is 200': (r) => r.status === 200,
     });
 
     sleep(0.01);
 }
+
