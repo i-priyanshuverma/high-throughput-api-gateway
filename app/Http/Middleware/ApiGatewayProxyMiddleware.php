@@ -94,8 +94,16 @@ class ApiGatewayProxyMiddleware
                     ->$method($targetUrl, $request->query());
             }
 
+            $responseHeaders = collect($response->headers())
+                ->reject(fn ($v, $k) => in_array(strtolower((string) $k), ['transfer-encoding', 'content-length', 'connection']))
+                ->mapWithKeys(function ($v, $k) {
+                    $val = is_array($v) ? implode('; ', array_filter($v)) : (string) $v;
+                    return [$k => $val];
+                })
+                ->toArray();
+
             return response($response->body(), $response->status())
-                ->withHeaders(collect($response->headers())->mapWithKeys(fn ($v, $k) => [$k => implode(', ', $v)])->toArray());
+                ->withHeaders($responseHeaders);
 
         } catch (\Throwable $e) {
             Log::error("Gateway Proxy Connection Error [{$serviceKey}]: " . $e->getMessage());
