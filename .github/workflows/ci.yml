@@ -35,5 +35,12 @@ jobs:
       - name: Generate Key
         run: php artisan key:generate
 
+      - name: Check Code Style with Pint 1.15
+        run: vendor/bin/pint --test
+
+      - name: Run PHPStan Level 8 Static Analysis
+        run: vendor/bin/phpstan analyse --memory-limit=2G
+
       - name: Run PHPUnit Feature & Unit Tests
         run: vendor/bin/phpunit
+
