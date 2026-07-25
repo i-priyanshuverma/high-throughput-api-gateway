@@ -168,6 +168,23 @@ k6 run tests/k6/load_test.js
 
 ---
 
+## ⚙️ Environment Variables Reference
+
+| Variable | Default Value | Description |
+| :--- | :--- | :--- |
+| `OCTANE_SERVER` | `swoole` | Octane engine driver (`swoole`, `roadrunner`) |
+| `OCTANE_WORKERS` | `auto` | Number of Swoole worker processes (`cpu_num() * 4`) |
+| `OCTANE_MAX_REQUESTS` | `50000` | Max requests per worker before recycle |
+| `OCTANE_MEMORY_LIMIT` | `512M` | Swoole worker RAM allocation limit |
+| `REDIS_HOST` | `127.0.0.1` | Redis host for rate limiting & circuit breaker state |
+| `RATE_LIMIT_REQUESTS` | `100` | Max requests allowed within rate limit window |
+| `RATE_LIMIT_WINDOW` | `60` | Sliding window rate limit time window in seconds |
+| `CIRCUIT_BREAKER_FAILURE_THRESHOLD` | `5` | Downstream error threshold before opening breaker |
+| `CIRCUIT_BREAKER_RESET_TIMEOUT` | `30` | Breaker OPEN timeout in seconds before HALF_OPEN probe |
+| `GATEWAY_AUTH_SECRET` | `super-secret...` | Secret key for JWT signature verification |
+
+---
+
 ## ☸️ Production Kubernetes Deployment Guide
 
 Deploy to Kubernetes cluster using the provided Helm chart:
@@ -185,6 +202,12 @@ helm upgrade --install api-gateway ./helm/api-gateway \
   --set replicaCount=5 \
   --set env.APP_ENV=production
 ```
+
+### Production Deployment Notes
+- **Readiness Probes**: Configure Kubernetes readiness probes pointing to `/healthz` to guarantee traffic is routed only after Redis and Octane workers are fully initialized.
+- **HPA Scaling**: Set Horizontal Pod Autoscaler thresholds based on CPU (>70%) and Memory (>80%) target utilization.
+- **Connection Pools**: Maintain Swoole task workers and Redis persistent connection pools in sync with peak request volume.
+
 
 ---
 
