@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\CircuitBreaker;
 use Closure;
 use Illuminate\Http\Request;
-use App\Services\CircuitBreaker;
 use Symfony\Component\HttpFoundation\Response;
 
 class CircuitBreakerMiddleware
@@ -18,21 +18,16 @@ class CircuitBreakerMiddleware
 
     /**
      * Handle incoming request with Circuit Breaker protections.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @param  string|null  $serviceKey
-     * @return mixed
      */
     public function handle(Request $request, Closure $next, ?string $serviceKey = null): Response
     {
         $services = config('gateway.services', []);
 
-        if (!$serviceKey) {
+        if (! $serviceKey) {
             $path = ltrim($request->getPathInfo(), '/');
             foreach ($services as $key => $config) {
-                if (str_starts_with($path, ltrim($config['prefix'], '/'))) {
-                    $serviceKey = $key;
+                if (str_starts_with($path, ltrim((string) $config['prefix'], '/'))) {
+                    $serviceKey = (string) $key;
                     break;
                 }
             }
@@ -40,7 +35,7 @@ class CircuitBreakerMiddleware
 
         $serviceKey = $serviceKey ?? 'default';
 
-        if (!$this->circuitBreaker->isAvailable($serviceKey)) {
+        if (! $this->circuitBreaker->isAvailable($serviceKey)) {
             return response()->json([
                 'error' => 'Service Unavailable',
                 'message' => "Downstream microservice [{$serviceKey}] is experiencing downtime or elevated failure rates. Circuit Breaker is OPEN.",
@@ -51,7 +46,6 @@ class CircuitBreakerMiddleware
             ], 503);
         }
 
-        /** @var Response $response */
         $response = $next($request);
 
         // Check if downstream response indicates failure (5xx server errors)

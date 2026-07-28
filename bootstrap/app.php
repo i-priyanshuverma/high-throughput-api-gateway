@@ -1,9 +1,15 @@
 <?php
 
+use App\Exceptions\Rfc7807ProblemDetails;
+use App\Http\Middleware\ApiGatewayProxyMiddleware;
+use App\Http\Middleware\AsyncRequestLoggingMiddleware;
+use App\Http\Middleware\CircuitBreakerMiddleware;
+use App\Http\Middleware\CorsHandlingMiddleware;
+use App\Http\Middleware\JwtOAuthValidationMiddleware;
+use App\Http\Middleware\RedisSlidingWindowRateLimiter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Exceptions\Rfc7807ProblemDetails;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -15,12 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'gateway.auth' => \App\Http\Middleware\JwtOAuthValidationMiddleware::class,
-            'gateway.ratelimit' => \App\Http\Middleware\RedisSlidingWindowRateLimiter::class,
-            'gateway.circuitbreaker' => \App\Http\Middleware\CircuitBreakerMiddleware::class,
-            'gateway.proxy' => \App\Http\Middleware\ApiGatewayProxyMiddleware::class,
-            'gateway.async_log' => \App\Http\Middleware\AsyncRequestLoggingMiddleware::class,
-            'gateway.cors' => \App\Http\Middleware\CorsHandlingMiddleware::class,
+            'gateway.auth' => JwtOAuthValidationMiddleware::class,
+            'gateway.ratelimit' => RedisSlidingWindowRateLimiter::class,
+            'gateway.circuitbreaker' => CircuitBreakerMiddleware::class,
+            'gateway.proxy' => ApiGatewayProxyMiddleware::class,
+            'gateway.async_log' => AsyncRequestLoggingMiddleware::class,
+            'gateway.cors' => CorsHandlingMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
@@ -36,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     503 => 'Service Unavailable',
                     default => 'Internal Server Error',
                 };
+
                 return Rfc7807ProblemDetails::render($e, $status, $title);
             }
         });

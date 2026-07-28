@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Redis;
 
 class GatewayController extends Controller
 {
@@ -27,7 +27,7 @@ class GatewayController extends Controller
     {
         $redisStatus = 'ok';
         try {
-            \Illuminate\Support\Facades\Redis::ping();
+            Redis::ping();
         } catch (\Throwable $e) {
             $redisStatus = 'degraded';
         }
@@ -41,4 +41,3 @@ class GatewayController extends Controller
         ], $isReady ? 200 : 503);
     }
 }
-

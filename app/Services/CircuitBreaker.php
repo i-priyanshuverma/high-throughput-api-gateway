@@ -7,12 +7,21 @@ use Illuminate\Support\Facades\Redis;
 class CircuitBreaker
 {
     public const STATE_CLOSED = 'CLOSED';
+
     public const STATE_OPEN = 'OPEN';
+
     public const STATE_HALF_OPEN = 'HALF_OPEN';
 
     protected int $failureThreshold;
+
     protected int $resetTimeout;
+
     protected int $halfOpenSuccessThreshold;
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $inMemoryStore = [];
 
     public function __construct()
     {
@@ -36,8 +45,10 @@ class CircuitBreaker
             $openedAt = (float) $this->getRedisValue("circuit:{$service}:opened_at", 0);
             if ((microtime(true) - $openedAt) >= $this->resetTimeout) {
                 $this->transitionToHalfOpen($service);
+
                 return true;
             }
+
             return false;
         }
 
@@ -76,6 +87,7 @@ class CircuitBreaker
         if ($state === self::STATE_HALF_OPEN) {
             // Immediate re-opening upon single failure in probe mode
             $this->openCircuit($service);
+
             return;
         }
 
@@ -122,7 +134,7 @@ class CircuitBreaker
      */
     public function getState(string $service): string
     {
-        return $this->getRedisValue("circuit:{$service}:state", self::STATE_CLOSED);
+        return (string) $this->getRedisValue("circuit:{$service}:state", self::STATE_CLOSED);
     }
 
     protected function setState(string $service, string $state): void
@@ -134,27 +146,30 @@ class CircuitBreaker
     {
         try {
             $val = Redis::get($key);
-            return $val !== null ? $val : $default;
+
+            return $val !== null ? $val : ($this->inMemoryStore[$key] ?? $default);
         } catch (\Throwable $e) {
-            return $default;
+            return $this->inMemoryStore[$key] ?? $default;
         }
     }
 
     protected function setRedisValue(string $key, mixed $value, int $ttl = 3600): void
     {
+        $this->inMemoryStore[$key] = (string) $value;
         try {
             Redis::setex($key, $ttl, (string) $value);
         } catch (\Throwable $e) {
-            // Ignore if Redis offline
+            // Fallback to in-memory store if Redis offline
         }
     }
 
     protected function delRedisKey(string $key): void
     {
+        unset($this->inMemoryStore[$key]);
         try {
             Redis::del($key);
         } catch (\Throwable $e) {
-            // Ignore if Redis offline
+            // Fallback to in-memory store if Redis offline
         }
     }
 }

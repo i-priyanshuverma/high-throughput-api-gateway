@@ -24,7 +24,7 @@ class MetricsCollector
     public function recordRateLimitHit(): void
     {
         try {
-            Redis::incr("metrics:rate_limit_hits");
+            Redis::incr('metrics:rate_limit_hits');
         } catch (\Throwable $e) {
             // Ignore if Redis offline
         }
@@ -43,7 +43,7 @@ class MetricsCollector
                     Redis::hincrby("metrics:latency:{$service}", (string) $b, 1);
                 }
             }
-            Redis::hincrby("metrics:latency:{$service}", "+Inf", 1);
+            Redis::hincrby("metrics:latency:{$service}", '+Inf', 1);
         } catch (\Throwable $e) {
             // Ignore if Redis offline
         }
@@ -56,13 +56,13 @@ class MetricsCollector
     {
         $lines = [];
 
-        $lines[] = "# HELP gateway_info Information about API Gateway deployment";
-        $lines[] = "# TYPE gateway_info gauge";
+        $lines[] = '# HELP gateway_info Information about API Gateway deployment';
+        $lines[] = '# TYPE gateway_info gauge';
         $lines[] = 'gateway_info{version="1.0.0",engine="octane_swoole",php="8.3"} 1';
-        $lines[] = "";
+        $lines[] = '';
 
-        $lines[] = "# HELP gateway_requests_total Total number of HTTP requests processed by Gateway";
-        $lines[] = "# TYPE gateway_requests_total counter";
+        $lines[] = '# HELP gateway_requests_total Total number of HTTP requests processed by Gateway';
+        $lines[] = '# TYPE gateway_requests_total counter';
 
         $services = config('gateway.services', ['users' => [], 'orders' => [], 'products' => []]);
         $hasRequestMetrics = false;
@@ -70,7 +70,7 @@ class MetricsCollector
         foreach (array_keys($services) as $service) {
             try {
                 $hash = Redis::hgetall("metrics:requests:{$service}");
-                if (!empty($hash)) {
+                if (! empty($hash)) {
                     foreach ($hash as $status => $count) {
                         $lines[] = "gateway_requests_total{service=\"{$service}\",status=\"{$status}\"} {$count}";
                         $hasRequestMetrics = true;
@@ -81,16 +81,16 @@ class MetricsCollector
             }
         }
 
-        if (!$hasRequestMetrics) {
+        if (! $hasRequestMetrics) {
             $lines[] = 'gateway_requests_total{service="users",status="200"} 124';
             $lines[] = 'gateway_requests_total{service="orders",status="200"} 89';
             $lines[] = 'gateway_requests_total{service="products",status="200"} 256';
             $lines[] = 'gateway_requests_total{service="orders",status="503"} 5';
         }
 
-        $lines[] = "";
-        $lines[] = "# HELP gateway_request_duration_seconds Request duration histogram in seconds";
-        $lines[] = "# TYPE gateway_request_duration_seconds histogram";
+        $lines[] = '';
+        $lines[] = '# HELP gateway_request_duration_seconds Request duration histogram in seconds';
+        $lines[] = '# TYPE gateway_request_duration_seconds histogram';
         $buckets = ['0.005', '0.01', '0.025', '0.05', '0.1', '0.25', '0.5', '1.0', '2.5', '5.0', '10.0', '+Inf'];
         foreach (array_keys($services) as $service) {
             foreach ($buckets as $b) {
@@ -98,25 +98,25 @@ class MetricsCollector
             }
         }
 
-        $lines[] = "";
-        $lines[] = "# HELP gateway_rate_limit_hits_total Total rate limit 429 breaches";
-        $lines[] = "# TYPE gateway_rate_limit_hits_total counter";
+        $lines[] = '';
+        $lines[] = '# HELP gateway_rate_limit_hits_total Total rate limit 429 breaches';
+        $lines[] = '# TYPE gateway_rate_limit_hits_total counter';
 
         $rateLimitHits = 0;
         try {
-            $rateLimitHits = (int) Redis::get("metrics:rate_limit_hits");
+            $rateLimitHits = (int) Redis::get('metrics:rate_limit_hits');
         } catch (\Throwable $e) {
             $rateLimitHits = 3;
         }
         $lines[] = "gateway_rate_limit_hits_total {$rateLimitHits}";
 
-        $lines[] = "";
-        $lines[] = "# HELP gateway_circuit_breaker_state Current circuit breaker state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)";
-        $lines[] = "# TYPE gateway_circuit_breaker_state gauge";
+        $lines[] = '';
+        $lines[] = '# HELP gateway_circuit_breaker_state Current circuit breaker state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)';
+        $lines[] = '# TYPE gateway_circuit_breaker_state gauge';
 
         $cb = app(CircuitBreaker::class);
         foreach (array_keys($services) as $service) {
-            $stateStr = $cb->getState($service);
+            $stateStr = $cb->getState((string) $service);
             $numericState = match ($stateStr) {
                 CircuitBreaker::STATE_CLOSED => 0,
                 CircuitBreaker::STATE_HALF_OPEN => 1,
@@ -126,9 +126,9 @@ class MetricsCollector
             $lines[] = "gateway_circuit_breaker_state{service=\"{$service}\"} {$numericState}";
         }
 
-        $lines[] = "";
-        $lines[] = "# HELP gateway_redis_queue_latency_seconds Current Redis queue processing latency in seconds";
-        $lines[] = "# TYPE gateway_redis_queue_latency_seconds gauge";
+        $lines[] = '';
+        $lines[] = '# HELP gateway_redis_queue_latency_seconds Current Redis queue processing latency in seconds';
+        $lines[] = '# TYPE gateway_redis_queue_latency_seconds gauge';
         $redisLatency = 0.0012;
         try {
             $start = microtime(true);
@@ -137,14 +137,14 @@ class MetricsCollector
         } catch (\Throwable $e) {
             $redisLatency = 0.050;
         }
-        $lines[] = sprintf("gateway_redis_queue_latency_seconds %.6f", $redisLatency);
+        $lines[] = sprintf('gateway_redis_queue_latency_seconds %.6f', $redisLatency);
 
-        $lines[] = "";
-        $lines[] = "# HELP gateway_uptime_seconds Total runtime uptime of API Gateway process";
-        $lines[] = "# TYPE gateway_uptime_seconds gauge";
+        $lines[] = '';
+        $lines[] = '# HELP gateway_uptime_seconds Total runtime uptime of API Gateway process';
+        $lines[] = '# TYPE gateway_uptime_seconds gauge';
         $uptime = time() - (defined('LARAVEL_START') ? (int) LARAVEL_START : time());
         $lines[] = "gateway_uptime_seconds {$uptime}";
 
-        return implode("\n", $lines) . "\n";
+        return implode("\n", $lines)."\n";
     }
 }

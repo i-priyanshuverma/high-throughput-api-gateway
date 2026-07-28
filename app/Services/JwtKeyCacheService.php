@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Http;
 
 class JwtKeyCacheService
 {

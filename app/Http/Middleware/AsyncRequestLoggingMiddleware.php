@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class AsyncRequestLoggingMiddleware
@@ -23,7 +24,7 @@ class AsyncRequestLoggingMiddleware
 
         $logData = [
             'timestamp' => now()->toIso8601String(),
-            'request_id' => $request->header('X-Gateway-Request-ID', (string) \Illuminate\Support\Str::uuid()),
+            'request_id' => $request->header('X-Gateway-Request-ID', (string) Str::uuid()),
             'method' => $request->getMethod(),
             'path' => $request->getPathInfo(),
             'ip' => $request->ip(),

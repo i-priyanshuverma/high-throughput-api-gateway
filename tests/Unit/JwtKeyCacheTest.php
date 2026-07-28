@@ -2,16 +2,16 @@
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
 use App\Services\JwtKeyCacheService;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Tests\TestCase;
 
 class JwtKeyCacheTest extends TestCase
 {
     public function test_key_cache_returns_public_key(): void
     {
-        $service = new JwtKeyCacheService();
+        $service = new JwtKeyCacheService;
         $key = $service->getPublicKey('default');
 
         $this->assertNotEmpty($key);
@@ -20,7 +20,7 @@ class JwtKeyCacheTest extends TestCase
 
     public function test_jwt_encode_and_decode_with_cached_key(): void
     {
-        $service = new JwtKeyCacheService();
+        $service = new JwtKeyCacheService;
         $secret = $service->getPublicKey('default');
 
         $payload = [

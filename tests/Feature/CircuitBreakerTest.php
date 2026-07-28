@@ -2,21 +2,21 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Services\CircuitBreaker;
+use Tests\TestCase;
 
 class CircuitBreakerTest extends TestCase
 {
     public function test_circuit_breaker_starts_closed(): void
     {
-        $cb = new CircuitBreaker();
+        $cb = new CircuitBreaker;
         $this->assertEquals(CircuitBreaker::STATE_CLOSED, $cb->getState('users'));
         $this->assertTrue($cb->isAvailable('users'));
     }
 
     public function test_circuit_breaker_opens_after_reaching_failure_threshold(): void
     {
-        $cb = new CircuitBreaker();
+        $cb = new CircuitBreaker;
         $service = 'orders';
 
         for ($i = 0; $i < 5; $i++) {
@@ -31,7 +31,7 @@ class CircuitBreakerTest extends TestCase
 
     public function test_circuit_breaker_half_open_transition_and_probe_recovery(): void
     {
-        $cb = new CircuitBreaker();
+        $cb = new CircuitBreaker;
         $service = 'products';
 
         // Trip to OPEN
@@ -53,7 +53,7 @@ class CircuitBreakerTest extends TestCase
 
     public function test_circuit_breaker_reopens_if_failure_occurs_in_half_open_state(): void
     {
-        $cb = new CircuitBreaker();
+        $cb = new CircuitBreaker;
         $service = 'users';
 
         $cb->transitionToHalfOpen($service);

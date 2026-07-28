@@ -8,9 +8,6 @@ parameters:
     # Level 8 is highest strictness for Larastan static type checking
     level: 8
 
-    ignoreErrors:
-        - '#Call to an undefined method Illuminate\\Contracts\\Foundation\\Application::.*#'
-
     excludePaths:
         - storage/
         - vendor/

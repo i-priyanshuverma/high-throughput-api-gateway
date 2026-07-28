@@ -33,6 +33,6 @@ class GatewayIntegrationTest extends TestCase
         ]);
 
         // Expect 200 or 204 depending on middleware configuration
-        $this->assertContains($response->status(), [200, 204]);
+        $this->assertContains($response->getStatusCode(), [200, 204]);
     }
 }

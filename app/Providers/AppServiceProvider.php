@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\CircuitBreaker;
+use App\Services\MetricsCollector;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,12 +13,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(\App\Services\CircuitBreaker::class, function ($app) {
-            return new \App\Services\CircuitBreaker();
+        $this->app->singleton(CircuitBreaker::class, function ($app) {
+            return new CircuitBreaker;
         });
 
-        $this->app->singleton(\App\Services\MetricsCollector::class, function ($app) {
-            return new \App\Services\MetricsCollector();
+        $this->app->singleton(MetricsCollector::class, function ($app) {
+            return new MetricsCollector;
         });
     }
 
