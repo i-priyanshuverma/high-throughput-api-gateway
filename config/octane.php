@@ -1,5 +1,19 @@
 <?php
 
+use Laravel\Octane\Events\RequestHandled;
+use Laravel\Octane\Events\RequestReceived;
+use Laravel\Octane\Events\RequestTerminated;
+use Laravel\Octane\Events\TaskReceived;
+use Laravel\Octane\Events\TickReceived;
+use Laravel\Octane\Events\WorkerErrorOccurred;
+use Laravel\Octane\Events\WorkerStarting;
+use Laravel\Octane\Events\WorkerStopping;
+use Laravel\Octane\Listeners\CreateDatabaseRelays;
+use Laravel\Octane\Listeners\EnsureDirectivesAreCleaned;
+use Laravel\Octane\Listeners\FlushTemporaryContainerInstances;
+use Laravel\Octane\Listeners\ReportException;
+use Laravel\Octane\Octane;
+
 return [
 
     /*
@@ -13,29 +27,41 @@ return [
     'https' => env('OCTANE_HTTPS', false),
 
     'listeners' => [
-        'swoole' => [
-            \Laravel\Octane\Events\WorkerStarting::class => [],
-            \Laravel\Octane\Events\RequestReceived::class => [
-                \Laravel\Octane\Listeners\CreateDatabaseRelays::class,
-            ],
-            \Laravel\Octane\Events\RequestTerminated::class => [],
-            \Laravel\Octane\Events\TaskReceived::class => [],
-            \Laravel\Octane\Events\TickReceived::class => [],
-            \Laravel\Octane\Events\WorkerErrorOccurred::class => [],
-            \Laravel\Octane\Events\WorkerStopping::class => [],
+        WorkerStarting::class => [
+            EnsureDirectivesAreCleaned::class,
         ],
+
+        RequestReceived::class => [
+            CreateDatabaseRelays::class,
+        ],
+
+        RequestHandled::class => [],
+
+        RequestTerminated::class => [
+            FlushTemporaryContainerInstances::class,
+        ],
+
+        TaskReceived::class => [],
+
+        TickReceived::class => [],
+
+        WorkerErrorOccurred::class => [
+            ReportException::class,
+        ],
+
+        WorkerStopping::class => [],
     ],
 
     'warm' => [
-        ... Laravel\Octane\Octane::defaultServicesToWarm(),
+        ...Octane::defaultServicesToWarm(),
     ],
 
     'flush' => [],
 
     'swoole' => [
         'options' => [
-            'worker_num' => env('OCTANE_WORKERS', swoole_cpu_num() * 4),
-            'task_worker_num' => env('OCTANE_TASK_WORKERS', swoole_cpu_num() * 4),
+            'worker_num' => env('OCTANE_WORKERS', function_exists('swoole_cpu_num') ? swoole_cpu_num() * 4 : 8),
+            'task_worker_num' => env('OCTANE_TASK_WORKERS', function_exists('swoole_cpu_num') ? swoole_cpu_num() * 4 : 8),
             'max_request' => (int) env('OCTANE_MAX_REQUESTS', 50000),
             'task_max_request' => (int) env('OCTANE_TASK_MAX_REQUESTS', 50000),
             'max_wait_time' => 30,
@@ -43,7 +69,7 @@ return [
             'open_tcp_nodelay' => true,
             'enable_reuse_port' => true,
             'max_coroutine' => 500000,
-            'socket_buffer_size' => 128 * 1024 * 1024, // 128MB buffer
+            'socket_buffer_size' => 128 * 1024 * 1024,
             'buffer_output_size' => 64 * 1024 * 1024,
             'package_max_length' => 128 * 1024 * 1024,
         ],
