@@ -1,10 +1,11 @@
 # High-Throughput API Gateway (PHP 8.3 / Laravel 11 / Octane / K8s)
 
 [![PHP Version](https://img.shields.io/badge/PHP-8.3-777BB4.svg?style=flat&logo=php)](https://www.php.net/)
-[![Laravel Framework](https://img.shields.io/badge/Laravel-11.0-FF2D20.svg?style=flat&logo=laravel)](https://laravel.com)
+[![Laravel Framework](https://img.shields.io/badge/Laravel-11.15-FF2D20.svg?style=flat&logo=laravel)](https://laravel.com)
 [![Laravel Octane](https://img.shields.io/badge/Laravel_Octane-Swoole-4053D6.svg?style=flat&logo=laravel)](https://laravel.com/docs/octane)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D.svg?style=flat&logo=redis)](https://redis.io)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm_3-326CE5.svg?style=flat&logo=kubernetes)](https://kubernetes.io)
+[![Release](https://img.shields.io/badge/Release-2026.1_Stable-success.svg?style=flat)]()
 
 High-performance, enterprise-grade API Gateway engineered with **PHP 8.3**, **Laravel 11**, and **Laravel Octane (Swoole driver)**. Designed to serve tens of thousands of requests per second with low latency, robust sliding-window rate limiting, circuit breaker fault tolerance, OAuth 2.0 / JWT security, and native Prometheus monitoring.
 
