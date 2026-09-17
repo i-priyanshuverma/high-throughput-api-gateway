@@ -117,6 +117,8 @@ Load testing conducted using K6 on 8-core CPU, 16GB RAM Swoole worker node:
 4. **OAuth 2.0 & JWT Security**: High-speed token signature verification, payload claims checking, and scope validation before passing requests downstream.
 5. **Observability & Prometheus Integration**: Exposes standard `/metrics` endpoint yielding Prometheus gauges and counters (`gateway_requests_total`, `gateway_rate_limit_hits_total`, `gateway_circuit_breaker_state`).
 6. **Kubernetes Helm Charts**: Production-ready chart with Horizontal Pod Autoscaler (HPA), Liveness/Readiness probes, ConfigMaps, and Secrets.
+7. **Dynamic Redis Response Caching**: Automated Redis-backed caching for idempotent GET requests yielding instant `X-Gateway-Cache: HIT` responses and bypassing downstream latency.
+8. **Distributed OpenTelemetry Tracing**: W3C `traceparent` and `tracestate` context header generation and propagation across downstream microservices.
 
 ---
 
@@ -183,6 +185,8 @@ k6 run tests/k6/load_test.js
 | `CIRCUIT_BREAKER_FAILURE_THRESHOLD` | `5` | Downstream error threshold before opening breaker |
 | `CIRCUIT_BREAKER_RESET_TIMEOUT` | `30` | Breaker OPEN timeout in seconds before HALF_OPEN probe |
 | `GATEWAY_AUTH_SECRET` | `super-secret...` | Secret key for JWT signature verification |
+| `GATEWAY_CACHE_ENABLED` | `true` | Enable/disable dynamic Redis response caching |
+| `GATEWAY_CACHE_TTL` | `60` | Dynamic response cache TTL in seconds |
 
 ---
 

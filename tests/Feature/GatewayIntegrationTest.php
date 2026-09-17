@@ -25,6 +25,14 @@ class GatewayIntegrationTest extends TestCase
         ]);
     }
 
+    public function test_healthz_readiness_endpoint_returns_json_status(): void
+    {
+        $response = $this->getJson('/healthz');
+
+        $this->assertContains($response->getStatusCode(), [200, 503]);
+        $response->assertJsonStructure(['status', 'redis', 'timestamp']);
+    }
+
     public function test_cors_preflight_request_returns_204_with_headers(): void
     {
         $response = $this->call('OPTIONS', '/api/v1/products', [], [], [], [
@@ -36,3 +44,4 @@ class GatewayIntegrationTest extends TestCase
         $this->assertContains($response->getStatusCode(), [200, 204]);
     }
 }
+

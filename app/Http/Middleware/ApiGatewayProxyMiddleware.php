@@ -68,10 +68,22 @@ class ApiGatewayProxyMiddleware
             $headers[$headerKey] = str_replace(["\r", "\n"], '', $val);
         }
 
-        $headers['x-forwarded-for'] = (string) $request->ip();
+        $headers['x-forwarded-for'] = $request->ip();
         $headers['x-forwarded-proto'] = $request->getScheme();
-        $headers['x-gateway-request-id'] = $request->header('X-Request-ID', (string) Str::uuid());
+        $headers['x-gateway-request-id'] = $request->header('X-Request-ID', (string) \Illuminate\Support\Str::uuid());
         $headers['connection'] = 'keep-alive';
+
+        // W3C Trace Context / OpenTelemetry propagation
+        $traceParent = $request->header('traceparent');
+        if (!$traceParent) {
+            $traceId = bin2hex(random_bytes(16));
+            $spanId = bin2hex(random_bytes(8));
+            $traceParent = "00-{$traceId}-{$spanId}-01";
+        }
+        $headers['traceparent'] = $traceParent;
+        if ($request->hasHeader('tracestate')) {
+            $headers['tracestate'] = (string) $request->header('tracestate');
+        }
 
         try {
             $method = strtolower($request->getMethod());

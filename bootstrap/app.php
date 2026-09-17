@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'gateway.proxy' => ApiGatewayProxyMiddleware::class,
             'gateway.async_log' => AsyncRequestLoggingMiddleware::class,
             'gateway.cors' => CorsHandlingMiddleware::class,
+            'gateway.cache' => \App\Http\Middleware\GatewayResponseCacheMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

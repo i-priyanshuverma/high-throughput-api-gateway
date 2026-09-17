@@ -62,4 +62,15 @@ return [
         'algorithm' => 'HS256',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Dynamic Response Caching Options
+    |--------------------------------------------------------------------------
+    */
+    'cache' => [
+        'enabled' => (bool) env('GATEWAY_CACHE_ENABLED', true),
+        'ttl' => (int) env('GATEWAY_CACHE_TTL', 60), // seconds
+        'prefix' => 'gateway:response_cache:',
+    ],
+
 ];
