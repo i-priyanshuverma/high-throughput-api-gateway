@@ -17,15 +17,18 @@ class GatewayResponseCacheMiddleware
         $enabled = config('gateway.cache.enabled', true);
 
         // Only cache idempotent GET and HEAD requests when enabled and no bypass requested
-        if (!$enabled || !in_array(strtoupper($request->getMethod()), ['GET', 'HEAD']) || $request->header('X-Cache-Bypass') === 'true') {
+        if (! $enabled || ! in_array(strtoupper($request->getMethod()), ['GET', 'HEAD']) || $request->header('X-Cache-Bypass') === 'true') {
             $response = $next($request);
-            return $response->header('X-Gateway-Cache', 'BYPASS');
+
+            $response->headers->set('X-Gateway-Cache', 'BYPASS');
+
+            return $response;
         }
 
         $cachePrefix = config('gateway.cache.prefix', 'gateway:response_cache:');
         $ttlSeconds = $ttl ?? (int) config('gateway.cache.ttl', 60);
 
-        $cacheKey = $cachePrefix . md5($request->fullUrl() . '|' . $request->header('Authorization', ''));
+        $cacheKey = $cachePrefix.md5($request->fullUrl().'|'.$request->header('Authorization', ''));
 
         try {
             $cachedData = Redis::get($cacheKey);
@@ -62,6 +65,8 @@ class GatewayResponseCacheMiddleware
             }
         }
 
-        return $response->header('X-Gateway-Cache', 'MISS');
+        $response->headers->set('X-Gateway-Cache', 'MISS');
+
+        return $response;
     }
 }

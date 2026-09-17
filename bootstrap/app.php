@@ -5,6 +5,7 @@ use App\Http\Middleware\ApiGatewayProxyMiddleware;
 use App\Http\Middleware\AsyncRequestLoggingMiddleware;
 use App\Http\Middleware\CircuitBreakerMiddleware;
 use App\Http\Middleware\CorsHandlingMiddleware;
+use App\Http\Middleware\GatewayResponseCacheMiddleware;
 use App\Http\Middleware\JwtOAuthValidationMiddleware;
 use App\Http\Middleware\RedisSlidingWindowRateLimiter;
 use Illuminate\Foundation\Application;
@@ -27,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'gateway.proxy' => ApiGatewayProxyMiddleware::class,
             'gateway.async_log' => AsyncRequestLoggingMiddleware::class,
             'gateway.cors' => CorsHandlingMiddleware::class,
-            'gateway.cache' => \App\Http\Middleware\GatewayResponseCacheMiddleware::class,
+            'gateway.cache' => GatewayResponseCacheMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

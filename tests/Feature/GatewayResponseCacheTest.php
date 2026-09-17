@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Http\Middleware\GatewayResponseCacheMiddleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
-use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 class GatewayResponseCacheTest extends TestCase
@@ -19,7 +18,7 @@ class GatewayResponseCacheTest extends TestCase
 
     public function test_cache_miss_on_first_request_and_hit_on_subsequent_request(): void
     {
-        $middleware = new GatewayResponseCacheMiddleware();
+        $middleware = new GatewayResponseCacheMiddleware;
         $request = Request::create('/api/v1/products', 'GET');
 
         // First call: MISS
@@ -40,7 +39,7 @@ class GatewayResponseCacheTest extends TestCase
 
     public function test_non_get_requests_bypass_caching(): void
     {
-        $middleware = new GatewayResponseCacheMiddleware();
+        $middleware = new GatewayResponseCacheMiddleware;
         $request = Request::create('/api/v1/orders', 'POST');
 
         $response = $middleware->handle($request, function () {
@@ -52,7 +51,7 @@ class GatewayResponseCacheTest extends TestCase
 
     public function test_request_with_cache_bypass_header_returns_bypass(): void
     {
-        $middleware = new GatewayResponseCacheMiddleware();
+        $middleware = new GatewayResponseCacheMiddleware;
         $request = Request::create('/api/v1/products', 'GET');
         $request->headers->set('X-Cache-Bypass', 'true');
 

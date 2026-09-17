@@ -70,12 +70,12 @@ class ApiGatewayProxyMiddleware
 
         $headers['x-forwarded-for'] = $request->ip();
         $headers['x-forwarded-proto'] = $request->getScheme();
-        $headers['x-gateway-request-id'] = $request->header('X-Request-ID', (string) \Illuminate\Support\Str::uuid());
+        $headers['x-gateway-request-id'] = $request->header('X-Request-ID', (string) Str::uuid());
         $headers['connection'] = 'keep-alive';
 
         // W3C Trace Context / OpenTelemetry propagation
         $traceParent = $request->header('traceparent');
-        if (!$traceParent) {
+        if (! $traceParent) {
             $traceId = bin2hex(random_bytes(16));
             $spanId = bin2hex(random_bytes(8));
             $traceParent = "00-{$traceId}-{$spanId}-01";
